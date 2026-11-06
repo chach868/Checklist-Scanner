@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Turn a photo of a paper or whiteboard task list into a checklist on your phone. Check items off while you work, then update the master list.">
+<meta name="theme-color" content="#E59A00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Checklist">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23E59A00'/%3E%3Cpath d='M8 16.5l5 5L24 10.5' fill='none' stroke='%231C1400' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Field Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: one narrow column like a clipboard; sticky header, sticky action bar; rows sized for thumbs and gloves */
+  --bg:#EEF0EE;
+  --surface:#FFFFFF;
+  --ink:#15191D;
+  --muted:#5B636B;
+  --line:#D5D9D6;
+  --accent:#E59A00;
+  --accent-ink:#1C1400;
+  --accent-soft:#FFF0C7;
+  --ok:#1D7748;
+  --ok-soft:#DFF1E6;
+  --danger:#B42318;
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111416; --surface:#1A1E21; --ink:#ECEFEC; --muted:#9AA3AA; --line:#2C3236;
+    --accent:#F2AE2E; --accent-ink:#1C1400; --accent-soft:#3A2E12;
+    --ok:#3FB37A; --ok-soft:#173326; --danger:#FF6B5E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111416; --surface:#1A1E21; --ink:#ECEFEC; --muted:#9AA3AA; --line:#2C3236;
+  --accent:#F2AE2E; --accent-ink:#1C1400; --accent-soft:#3A2E12;
+  --ok:#3FB37A; --ok-soft:#173326; --danger:#FF6B5E;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.4 var(--font-body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;min-height:100vh}
+.wrap{width:100%;max-width:640px;margin:0 auto;padding:0 16px}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+.muted{color:var(--muted)}
+.tab{font-variant-numeric:tabular-nums}
+
+/* header */
+#top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.tb{display:flex;align-items:center;gap:10px;min-height:58px;padding-top:6px;padding-bottom:6px}
+.brand{display:flex;align-items:center;gap:10px;font:700 23px/1 var(--font-display);letter-spacing:.07em;text-transform:uppercase}
+.mark{width:26px;height:26px;border-radius:6px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.ttl{flex:1;min-width:0;font:700 22px/1.1 var(--font-display);letter-spacing:.02em}
+.back{border:0;background:none;padding:10px 8px 10px 0;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;min-height:44px}
+.iconbtn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;width:44px;height:44px;display:grid;place-items:center;cursor:pointer;flex:none}
+
+main{flex:1;padding:16px 0 8px}
+main .wrap{display:flex;flex-direction:column;gap:14px}
+
+/* buttons */
+.btn{min-height:52px;border-radius:10px;font-weight:600;font-size:17px;border:1.5px solid var(--ink);background:var(--surface);color:var(--ink);padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-align:center}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.amber{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{border-color:var(--line)}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.block{width:100%}
+.btn.sm{min-height:44px;font-size:15px;padding:0 14px}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* home cards */
+.lcard{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer}
+.lc-top{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.lc-title{flex:1;min-width:60%;font:700 21px/1.15 var(--font-display);letter-spacing:.01em}
+.lc-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:15px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:999px;background:var(--bg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.chip.amber{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.bar3{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line)}
+.bar3 i{display:block;height:100%}
+.bar3 .s{background:var(--muted)}
+.bar3 .d{background:var(--ok)}
+.status{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px;padding:6px 2px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--ok)}
+.dot.warn{background:var(--accent)}
+.hint{background:var(--surface);border:1.5px dashed var(--line);border-radius:12px;padding:14px 16px;color:var(--muted);font-size:15px}
+.hint b{color:var(--ink)}
+
+/* new */
+.tile{position:relative;display:grid;grid-template-columns:44px 1fr;gap:4px 14px;align-items:center;text-align:left;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:16px;cursor:pointer;min-height:84px;overflow:hidden}
+.tile input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0;z-index:2}
+.tile:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.diag{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.tile .ic{grid-row:1 / span 2;width:44px;height:44px;border-radius:10px;background:var(--bg);display:grid;place-items:center}
+.tile b{font:700 21px/1.1 var(--font-display);letter-spacing:.01em}
+.tile span{color:var(--muted);font-size:15px}
+.tile.first{border-color:var(--ink)}
+.tile.first .ic{background:var(--accent);color:var(--accent-ink)}
+.tile.off{opacity:.55}
+.banner{border-radius:10px;padding:12px 14px;background:var(--accent-soft);border:1.5px solid var(--accent);font-size:15px}
+textarea,input[type=text]{width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px;font-size:17px}
+textarea:focus,input[type=text]:focus{border-color:var(--ink);outline:none}
+label.lbl{font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px}
+.tips{font-size:14px;color:var(--muted);padding:0 2px}
+.drop{outline:3px dashed var(--accent);outline-offset:6px;border-radius:12px}
+
+/* rows */
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.sec{font:700 15px/1 var(--font-display);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:16px 4px 8px;display:flex;justify-content:space-between}
+.sec:first-child{padding-top:2px}
+.group{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:54px 1fr auto 44px;align-items:center;min-height:62px;border-top:1px solid var(--line);position:relative}
+.group > .row:first-child{border-top:0}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:transparent}
+.row.done::before{background:var(--accent)}
+.row.ind .tick{padding-left:18px}
+.row.ind{grid-template-columns:72px 1fr auto 44px}
+.tick{height:100%;min-height:62px;display:grid;place-items:center;background:none;border:0;cursor:pointer;padding:0}
+.box{width:30px;height:30px;border:2.5px solid var(--ink);border-radius:7px;display:grid;place-items:center;color:transparent;transition:background .12s,border-color .12s}
+.row.done .box{background:var(--ok);border-color:var(--ok);color:#fff}
+.row.synced .box{background:var(--line);border-color:var(--line);color:var(--muted)}
+.txt{padding:10px 4px 10px 2px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0}
+.t{overflow-wrap:anywhere}
+.row.synced .t{text-decoration:line-through;text-decoration-thickness:1.5px;color:var(--muted)}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.note{font-size:14px;color:var(--muted);font-style:italic;overflow-wrap:anywhere}
+.num{font:500 13px var(--font-mono);color:var(--muted);padding:0 4px;font-variant-numeric:tabular-nums}
+.more{border:0;background:none;height:100%;min-height:62px;cursor:pointer;color:var(--muted);display:grid;place-items:center}
+.addrow{border:1.5px dashed var(--line);background:none;border-radius:12px;min-height:54px;font-weight:600;color:var(--muted);cursor:pointer;width:100%}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;min-height:40px;padding:0 14px;font-weight:600;font-size:15px;cursor:pointer}
+.fchip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.summary{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 16px}
+.sumline{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.big{font:700 34px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.big small{font-size:22px;color:var(--muted)}
+.empty{text-align:center;padding:28px 16px;color:var(--muted)}
+
+/* sync */
+.lead{font-size:17px}
+.srow{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:6px;min-height:68px;border-top:1px solid var(--line);padding:8px 12px 8px 0;position:relative}
+.group > .srow:first-child{border-top:0}
+.srow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent)}
+.snum{font:500 17px var(--font-mono);text-align:center;font-variant-numeric:tabular-nums}
+.snum.new{font-size:12px;letter-spacing:.06em;color:var(--accent-ink);background:var(--accent);border-radius:6px;padding:4px 0;margin:0 8px}
+.ssec{font:700 13px/1 var(--font-display);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.uptodate{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:36px 16px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px}
+.uptodate .bigcheck{width:64px;height:64px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center}
+details.open-list{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 16px}
+details.open-list summary{font-weight:600;cursor:pointer;min-height:32px;display:flex;align-items:center}
+details.open-list ol{margin:8px 0 4px;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px;color:var(--muted)}
+details.open-list li{display:flex;gap:10px}
+
+/* review */
+.erow{display:grid;grid-template-columns:40px 1fr 44px 44px;align-items:center;gap:4px;padding:6px 6px 6px 0;border-top:1px solid var(--line)}
+.group > .erow:first-child{border-top:0}
+.erow.ind{grid-template-columns:56px 1fr 44px 44px}
+.erow textarea{border-color:transparent;background:transparent;padding:9px 8px;resize:none;overflow:hidden;line-height:1.35;min-height:44px;display:block}
+.erow textarea:focus{background:var(--bg);border-color:var(--ink)}
+.mini{width:40px;height:40px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--muted)}
+.mini.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.thumbs{display:flex;gap:8px;overflow-x:auto}
+.thumbs button{border:1.5px solid var(--line);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;background:var(--surface);flex:none}
+.thumbs img{display:block;height:92px;width:auto}
+
+/* reading */
+.reading{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px 0}
+.scanbox{position:relative;border-radius:12px;overflow:hidden;border:1.5px solid var(--line);max-width:100%}
+.scanbox img{display:block;max-height:280px;max-width:100%}
+.scanbox::after{content:"";position:absolute;left:0;right:0;height:38%;top:-40%;background:linear-gradient(to bottom,transparent,color-mix(in srgb,var(--accent) 45%,transparent),transparent);animation:scan 1.8s ease-in-out infinite}
+@keyframes scan{to{top:100%}}
+.spin{width:36px;height:36px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.scanbox::after,.spin{animation:none}.box{transition:none}}
+#busy-status{font:700 22px/1.2 var(--font-display);letter-spacing:.02em}
+
+/* bottom bar */
+#bar{position:sticky;bottom:0;z-index:4;background:linear-gradient(to bottom,transparent,var(--bg) 28%);padding:18px 0 16px}
+#bar:empty{display:none}
+#bar .wrap{display:flex;gap:10px}
+#bar .wrap > *{flex:1}
+.barnote{font-size:14px;color:var(--muted);text-align:center;padding:6px}
+
+/* sheet */
+#sheet{position:fixed;inset:0;z-index:20;display:none}
+#sheet.show{display:block}
+.scrim{position:absolute;inset:0;background:rgba(10,12,14,.5)}
+.panel{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;max-height:92%;overflow:auto;background:var(--surface);border-radius:16px 16px 0 0;padding:18px 16px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+@media (min-width:640px){.panel{bottom:auto;top:50%;transform:translateY(-50%);border-radius:16px}}
+.panel h3{font:700 22px/1.15 var(--font-display);letter-spacing:.01em}
+.menu{display:flex;flex-direction:column}
+.menu button{min-height:54px;border:0;border-top:1px solid var(--line);background:none;text-align:left;font-weight:600;font-size:17px;cursor:pointer;padding:0 4px}
+.menu button:first-child{border-top:0}
+.menu button.danger{color:var(--danger)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.seg label{display:flex;align-items:center;justify-content:center;min-height:48px;font-weight:600;font-size:15px;cursor:pointer;border-left:1px solid var(--line);text-align:center;padding:0 4px}
+.seg label:first-child{border-left:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--ink);color:var(--bg)}
+.seg label:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:-3px}
+.row2{display:flex;gap:10px}
+.row2 > *{flex:1}
+.viewer{overflow:auto;border-radius:10px;border:1px solid var(--line);max-height:70vh}
+.viewer img{display:block;width:100%;cursor:zoom-in}
+.viewer.zoom img{width:260%;max-width:none;cursor:zoom-out}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:30;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px 10px 16px;display:flex;gap:14px;align-items:center;max-width:calc(100% - 32px);transition:opacity .15s,transform .15s;font-size:15px}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#toast button{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;min-height:36px;padding:0 6px}
+@media (prefers-reduced-motion: reduce){#toast{transition:none}}
+
+.row.done::before{background:transparent}
+a{color:var(--ink);font-weight:600;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+.tips a{color:var(--ink)}
+</style>
+</head>
+<body>
+<header id="top"></header>
+<main id="main"></main>
+<div id="bar"></div>
+<div id="sheet" aria-hidden="true"><div class="scrim" data-act="close-sheet"></div><div class="panel" role="dialog" aria-modal="true" id="panel"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+/* Field Checklist, standalone version: runs entirely on the phone. No account, no uploads.
+   Photos are read with on-device text recognition (Tesseract.js). Lists are saved in this browser. */
+const CLAUDE_URL = "https://claude.ai/artifact/5sv7hmmSoUU18mh78sgnSG";
+const TESS_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+const PDF_BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/";
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const clone = o => JSON.parse(JSON.stringify(o));
+const pad2 = n => String(n).padStart(2, "0");
+
+const ICON = {
+  check: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  more: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>',
+  cam: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  file: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v4h4M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  type: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M5 6h14M5 11h14M5 16h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+};
+
+function fmtWhen(ts){
+  if(!ts) return "";
+  const d = new Date(ts), now = new Date();
+  if(d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  return d.toLocaleDateString([], {month:"short", day:"numeric"});
+}
+const isDone = it => it.state==="done" || it.state==="synced";
+function counts(l){
+  let done=0; for(const it of l.items) if(isDone(it)) done++;
+  return {done, open:l.items.length-done, total:l.items.length};
+}
+function bar3(c){
+  return `<div class="bar3" aria-hidden="true"><i class="d" style="width:${c.total ? c.done/c.total*100 : 0}%"></i></div>`;
+}
+
+/* ---------- state & storage ---------- */
+const S = {lists:{}, view:"home", cur:null, filter:"all", draft:null, busy:null, typing:false, newMsg:"", undo:null, example:null, exampleHidden:false, storageOK:true};
+const LKEY = "fieldchecklist.standalone.v1";
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LKEY);
+    if(raw){ const o = JSON.parse(raw); if(o && o.lists) S.lists = o.lists; S.exampleHidden = !!o.exampleHidden; }
+  }catch(e){ S.storageOK = false; }
+}
+function saveLocal(){
+  try{ localStorage.setItem(LKEY, JSON.stringify({lists:S.lists, exampleHidden:S.exampleHidden})); S.storageOK = true; }
+  catch(e){
+    // probably full: drop stored photos, keep the lists
+    try{
+      for(const l of Object.values(S.lists)) l.photos = [];
+      localStorage.setItem(LKEY, JSON.stringify({lists:S.lists, exampleHidden:S.exampleHidden}));
+      toast("Phone storage is full, so the saved photos were removed. Your lists are kept.");
+    }catch(e2){ S.storageOK = false; toast("This browser won't save lists right now. Check that private browsing is off."); }
+  }
+}
+function makeExample(){
+  const raw = [
+    ["Cabin","Install cabin speaker grilles (x4)","pre"],["Cabin","Secure headliner trim at FS 180","done"],["Cabin","Ops check reading lights","open"],
+    ["Cockpit","Torque GSU mounting screws","pre"],["Cockpit","Label circuit breakers per drawing","done"],["Cockpit","Pitot-static leak check","open"],["Cockpit","Update weight & balance","open"],
+    ["Exterior","Seal antenna doubler","done"],["Exterior","Safety-wire ELT antenna connector","open"],["Exterior","Final walkaround","open"]
+  ];
+  return {id:"example", example:true, title:"Hangar punch list", createdAt:Date.now(), updatedAt:Date.now(), source:"example", photos:[],
+    items: raw.map((r,i)=>({id:"e"+i, n:i+1, section:r[0], text:r[1], state:r[2]==="pre"?"done":r[2], pre:r[2]==="pre", indent:0, note:"", added:false, doneAt:null, syncedAt:null}))};
+}
+function getList(id){ return id==="example" ? S.example : S.lists[id]; }
+function realLists(){ return Object.values(S.lists).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)); }
+function touch(l){
+  l.updatedAt = Date.now();
+  if(l.example){ S.example = l; render(); return; }
+  S.lists[l.id] = l; saveLocal(); render();
+}
+function removeList(id){
+  if(id==="example"){ S.exampleHidden = true; saveLocal(); return; }
+  delete S.lists[id]; saveLocal();
+}
+window.addEventListener("storage", e=>{ if(e.key===LKEY){ loadLocal(); if(["home","list","sync"].includes(S.view)) render(); } });
+
+/* ---------- text parsing ---------- */
+function parseText(t, isCsv){
+  const out = []; let section = "";
+  for(let raw of String(t).split(/\r?\n/)){
+    if(isCsv){
+      const m = raw.match(/^\s*"((?:[^"]|"")*)"|^([^,\t]*)/);
+      raw = m ? (m[1]!==undefined ? m[1].replace(/""/g,'"') : m[2]) : raw;
+    }
+    raw = raw.replace(/\t/g, "    ");
+    if(!raw.trim()) continue;
+    const indent = /^\s{2,}/.test(raw) ? 1 : 0;
+    let s = raw.trim(), done = false, marker = false;
+    if(/^#{1,6}\s+/.test(s)){ section = s.replace(/^#{1,6}\s+/, "").slice(0,80); continue; }
+    let m;
+    if((m = s.match(/^(?:[-*•+–]\s*)?\[([ xX✓✔])\]\s*/))){ done = m[1].trim()!==""; marker = true; s = s.slice(m[0].length); }
+    else if((m = s.match(/^[☐□○]\s*/))){ marker = true; s = s.slice(m[0].length); }
+    else if((m = s.match(/^[☑☒✓✔✅●]\s*/))){ marker = true; done = true; s = s.slice(m[0].length); }
+    if((m = s.match(/^(?:[-*•+–]|\d{1,3}[.)]|[a-zA-Z][.)])\s+/))){ marker = true; s = s.slice(m[0].length); }
+    if(!marker && /:$/.test(s) && s.length <= 50){ section = s.slice(0,-1).trim(); continue; }
+    if(isCsv && out.length===0 && /^(task|item|description|todo|to do|name)s?$/i.test(s)) continue;
+    s = s.replace(/^~~(.*)~~$/, (_,x)=>{ done = true; return x; }).trim();
+    if(s) out.push({text:s.slice(0,400), section, indent, done});
+  }
+  return out;
+}
+
+/* OCR output: printed check boxes come out as junk like "[0", "[J", "[]", "O", and ticked
+   ones as "M", "[x", "W", "&". Recognize those, then parse. */
+const BOX_EMPTY = /^(?:[\[\(\{|]\s*[0oOJjIl1_]?\s*[\]\)\}|]?|\|_\||[□■☐]|[oO0])\s+(?=\S)/;
+const BOX_TICK  = /^(?:[\[\(\{|]\s*)?[xXvVyYMWR&%@✓✔/]\s*[\]\)\}|]?\s+(?=[A-Z0-9])/;
+function boxOf(s){
+  let m;
+  if((m = s.match(/^[\[\(\{|]\s*[xXvV✓✔/]\s*[\]\)\}|]\s*/))) return {done:true, rest:s.slice(m[0].length)};
+  if((m = s.match(BOX_EMPTY))) return {done:false, rest:s.slice(m[0].length)};
+  if((m = s.match(BOX_TICK))) return {done:true, rest:s.slice(m[0].length), weak:true};
+  return null;
+}
+function ocrToItems(lines){
+  const kept = [];
+  for(const ln of lines){
+    const text = (ln.text || "").replace(/\n/g, " ").replace(/[|]{2,}/g, " ").replace(/\s{2,}/g, " ").trim();
+    if(!text) continue;
+    if((text.match(/[A-Za-z]/g) || []).length < 2) continue;
+    if(typeof ln.confidence === "number" && ln.confidence < 30) continue;
+    kept.push(text);
+  }
+  // only treat single-letter prefixes as tick marks when the list clearly uses boxes
+  const strong = kept.filter(t=>{ const b=boxOf(t); return b && !b.weak; }).length;
+  const boxMode = strong >= 2;
+  let title = "", sawBox = false;
+  const out = [];
+  for(const t of kept){
+    const b = boxMode ? boxOf(t) : (boxOf(t) && !boxOf(t).weak ? boxOf(t) : null);
+    if(b){ sawBox = true; out.push((b.done ? "[x] " : "[ ] ") + b.rest.replace(/^[^A-Za-z0-9(#]+/, "")); continue; }
+    if(boxMode && !sawBox && !title && !/:$/.test(t) && t.length <= 60){ title = t; continue; }
+    out.push(t.replace(/^[«»®©¢~*•·]\s+/, ""));
+  }
+  return {title, items: parseText(out.join("\n"), false)};
+}
+
+/* ---------- images, OCR, PDF ---------- */
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+async function loadImage(file){
+  if("createImageBitmap" in window){ try{ return await createImageBitmap(file, {imageOrientation:"from-image"}); }catch(e){} }
+  return await new Promise((res, rej)=>{
+    const url = URL.createObjectURL(file); const im = new Image();
+    im.onload = ()=>res(im); im.onerror = ()=>rej(new Error("decode")); im.src = url;
+  });
+}
+function drawScaled(src, maxSide, minSide){
+  const w = src.width, h = src.height;
+  let k = Math.min(1, maxSide/Math.max(w,h));
+  if(minSide && Math.max(w,h)*k < minSide) k = minSide/Math.max(w,h);
+  const c = document.createElement("canvas"); c.width = Math.max(1,Math.round(w*k)); c.height = Math.max(1,Math.round(h*k));
+  const ctx = c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(src,0,0,c.width,c.height);
+  return c;
+}
+function makeThumb(src){
+  let url = drawScaled(src, 1100).toDataURL("image/jpeg", .55);
+  if(url.length > 115000) url = drawScaled(src, 800).toDataURL("image/jpeg", .5);
+  return url;
+}
+/* grayscale + contrast stretch: helps with photos of paper in shop lighting */
+function prepForOcr(src){
+  const c = drawScaled(src, 2200, 1400);
+  const ctx = c.getContext("2d");
+  const img = ctx.getImageData(0,0,c.width,c.height), d = img.data, n = d.length/4;
+  const hist = new Uint32Array(256);
+  for(let i=0;i<d.length;i+=4){ const g = (d[i]*299 + d[i+1]*587 + d[i+2]*114)/1000 | 0; d[i]=g; hist[g]++; }
+  let lo=0, hi=255, acc=0;
+  for(let v=0; v<256; v++){ acc+=hist[v]; if(acc > n*0.02){ lo=v; break; } }
+  acc=0; for(let v=255; v>=0; v--){ acc+=hist[v]; if(acc > n*0.02){ hi=v; break; } }
+  const span = Math.max(1, hi-lo);
+  for(let i=0;i<d.length;i+=4){ let g = (d[i]-lo)*255/span; g = g<0?0:g>255?255:g; d[i]=d[i+1]=d[i+2]=g; }
+  ctx.putImageData(img,0,0);
+  return c;
+}
+
+let tessReady = null, workerP = null, PROG = null;
+function getWorker(){
+  if(!tessReady){ tessReady = loadScript(TESS_URL).then(()=>{ if(!window.Tesseract) throw new Error("ocr"); }); tessReady.catch(()=>{ tessReady=null; }); }
+  if(!workerP){
+    workerP = tessReady.then(()=>window.Tesseract.createWorker("eng", 1, {logger: m=>{ if(PROG) PROG(m); }}));
+    workerP.catch(()=>{ workerP=null; });
+  }
+  return workerP;
+}
+async function ocrCanvases(canvases){
+  setBusy("Loading the text reader…", "First time only. It downloads about 10 MB, then works faster.");
+  const worker = await getWorker();
+  const allLines = [];
+  for(let i=0; i<canvases.length; i++){
+    if(S.busy && S.busy.stopped) throw {code:"cancelled"};
+    const label = canvases.length>1 ? `Reading page ${i+1} of ${canvases.length}` : "Reading your list";
+    setBusy(label + "…", "Printed lists read best. Fix anything misread on the next screen.");
+    PROG = m=>{ if(m.status==="recognizing text") setBusy(`${label}… ${Math.round(m.progress*100)}%`); };
+    const {data} = await worker.recognize(canvases[i]);
+    PROG = null;
+    if(Array.isArray(data.lines) && data.lines.length) allLines.push(...data.lines);
+    else allLines.push(...String(data.text||"").split("\n").map(t=>({text:t})));
+  }
+  return ocrToItems(allLines);
+}
+
+async function readPhotos(files){
+  startReading();
+  setBusy("Preparing photos…");
+  const canvases = [], thumbs = [];
+  try{
+    for(const f of files.slice(0, 6)){
+      const bmp = await loadImage(f);
+      canvases.push(prepForOcr(bmp));
+      if(thumbs.length < 2) thumbs.push(makeThumb(bmp));
+    }
+  }catch(e){ backToNew("That photo couldn't be opened. Try another one, or a screenshot."); return; }
+  S.busy.thumbs = thumbs; render();
+  if(files.length > 6) toast("Only the first 6 photos are read.");
+  await runOcr(canvases, thumbs, "photo", "");
+}
+async function runOcr(canvases, thumbs, source, title){
+  try{
+    const res = await ocrCanvases(canvases);
+    if(S.view!=="reading") return;
+    if(!res.items.length){ backToNew("No list lines were found. Try a closer, straight-on photo with good light, or type the list in."); return; }
+    startReview(res.items, res.title || title, thumbs, source);
+  }catch(e){
+    if(e && e.code==="cancelled") return;
+    backToNew(navigator.onLine===false
+      ? "The text reader needs internet the first time it's used. Connect once, then it works."
+      : "The photo couldn't be read. Check your connection and try again, or type the list in.");
+  }
+}
+
+let pdfReady = null;
+function loadPdfJs(){
+  if(!pdfReady){
+    pdfReady = loadScript(PDF_BASE+"pdf.min.js").then(()=>{
+      if(!window.pdfjsLib) throw new Error("pdf");
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_BASE+"pdf.worker.min.js";
+    });
+    pdfReady.catch(()=>{ pdfReady = null; });
+  }
+  return pdfReady;
+}
+async function readPdf(file){
+  startReading(); setBusy("Opening PDF…");
+  try{ await loadPdfJs(); }catch(e){ backToNew("The PDF reader didn't load. Check your connection, or use a photo or screenshot of the page."); return; }
+  const title = file.name.replace(/\.[^.]+$/,"").slice(0,60);
+  let doc;
+  try{ doc = await window.pdfjsLib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise; }
+  catch(e){ backToNew("That PDF couldn't be opened. It may be password-protected or damaged."); return; }
+  // 1) PDFs with real text: read it directly
+  let text = "";
+  for(let p=1; p<=Math.min(doc.numPages, 30); p++){
+    const tc = await (await doc.getPage(p)).getTextContent();
+    for(const it of tc.items){ text += it.str; if(it.hasEOL) text += "\n"; }
+    text += "\n";
+  }
+  if((text.match(/[A-Za-z]/g)||[]).length > 20){
+    const items = parseText(text, false);
+    if(items.length){ startReview(items, title, [], "pdf"); return; }
+  }
+  // 2) scanned PDFs: render pages and use text recognition
+  const canvases = [], thumbs = [];
+  for(let p=1; p<=Math.min(doc.numPages, 6); p++){
+    const page = await doc.getPage(p);
+    const vp1 = page.getViewport({scale:1});
+    const vp = page.getViewport({scale: Math.min(3, 2200/Math.max(vp1.width, vp1.height))});
+    const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const ctx = c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    if(thumbs.length < 2) thumbs.push(makeThumb(c));
+    canvases.push(prepForOcr(c));
+  }
+  if(S.busy && S.busy.stopped) return;
+  S.busy.thumbs = thumbs; render();
+  await runOcr(canvases, thumbs, "pdf", title);
+}
+
+async function handleFiles(fileList){
+  const files = [...(fileList||[])];
+  if(!files.length) return;
+  S.newMsg = "";
+  const images = files.filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp|gif|bmp)$/i.test(f.name));
+  const pdf = files.find(f => f.type==="application/pdf" || /\.pdf$/i.test(f.name));
+  const txt = files.find(f => /^text\//.test(f.type) || /\.(txt|md|csv|tsv)$/i.test(f.name));
+  if(images.length) return readPhotos(images);
+  if(pdf) return readPdf(pdf);
+  if(txt){
+    const t = await txt.text();
+    const items = parseText(t, /\.(csv|tsv)$/i.test(txt.name) || /csv/.test(txt.type));
+    if(!items.length){ S.newMsg = "That file didn't have any list lines in it."; render(); return; }
+    return startReview(items, txt.name.replace(/\.[^.]+$/,"").slice(0,60), [], "file");
+  }
+  S.newMsg = "That file type isn't supported. Use a photo, a PDF, or a .txt or .csv list.";
+  render();
+}
+function startReading(){ S.busy = {thumbs:[], status:"Reading your list…", sub:"", stopped:false}; S.view = "reading"; render(); }
+function setBusy(t, sub){
+  if(!S.busy) return; S.busy.status = t; if(sub!==undefined) S.busy.sub = sub;
+  const el = $("#busy-status"); if(el) el.textContent = t;
+  const sl = $("#busy-sub"); if(sl && sub!==undefined) sl.textContent = sub;
+}
+function backToNew(msg){ S.view = "new"; S.busy = null; S.newMsg = msg || ""; render(); }
+function defaultTitle(){ return "Checklist " + new Date().toLocaleDateString([], {month:"short", day:"numeric"}); }
+function startReview(items, title, thumbs, source){
+  S.draft = {title: title || defaultTitle(), thumbs: thumbs||[], source,
+    items: items.map(i=>({k:newId(), text:i.text, section:i.section||"", indent:i.indent||0, done:!!i.done}))};
+  S.busy = null; S.view = "review"; render(); window.scrollTo(0,0);
+}
+function saveDraft(){
+  const d = S.draft; if(!d) return;
+  const items = d.items.filter(i=>i.text.trim());
+  if(!items.length){ toast("Add at least one item first."); return; }
+  const id = newId();
+  const list = {id, title:(d.title||"").trim() || defaultTitle(), createdAt:Date.now(), updatedAt:Date.now(), source:d.source||"text", photos:d.thumbs||[],
+    items: items.map((i,ix)=>({id:newId()+ix, n:ix+1, text:i.text.trim(), section:i.section, indent:i.indent, state:i.done?"done":"open", pre:!!i.done, note:"", added:false, doneAt:i.done?Date.now():null}))};
+  S.draft = null; S.cur = id; S.view = "list"; S.filter = "all";
+  touch(list); window.scrollTo(0,0); toast("Checklist saved");
+}
+
+/* ---------- rendering ---------- */
+function claudeNote(short){
+  return short
+    ? `<p class="tips">Lists are handwritten or on a whiteboard? The <a href="${CLAUDE_URL}" target="_blank" rel="noopener">Claude version</a> reads those much better. It needs a Claude account.</p>`
+    : `<div class="hint"><b>Have a Claude account?</b> The <a href="${CLAUDE_URL}" target="_blank" rel="noopener">Claude version</a> works the same but reads handwriting and whiteboards much better, and spots items already checked off. Open it in Chrome or Safari, signed in to claude.ai.</div>`;
+}
+function render(){
+  const top = $("#top"), main = $("#main"), bar = $("#bar");
+  let h="", m="", b="";
+  const v = S.view;
+  if(v==="home"){
+    h = `<div class="wrap tb"><div class="brand"><span class="mark">${ICON.check}</span>Field Checklist</div></div>`;
+    const lists = realLists();
+    const showEx = !lists.length && !S.exampleHidden;
+    if(showEx && !S.example) S.example = makeExample();
+    m += `<button class="btn primary block" data-act="new">+ New checklist from a photo or file</button>`;
+    if(showEx){
+      m += `<div class="hint">Snap your paper list or whiteboard and it becomes a checklist on your phone. Check things off while you work. Checked items stay on the list, so when you're back at the master list you can see what to mark. Here's an example to try:</div>`;
+      m += card(S.example);
+    }else if(!lists.length){
+      m += `<div class="hint">No checklists yet. Take a photo of your list to start.</div>`;
+    }
+    for(const l of lists) m += card(l);
+    m += `<div class="status"><span class="dot ${S.storageOK?"on":"warn"}"></span>${S.storageOK ? "Saved on this phone only. Nothing is uploaded." : "This browser isn't saving lists. Turn off private browsing."}</div>`;
+    m += claudeNote(false);
+  }
+  else if(v==="new"){
+    h = `<div class="wrap tb"><button class="back" data-act="home">‹ Lists</button><div class="ttl">New checklist</div></div>`;
+    if(S.newMsg) m += `<div class="banner" role="alert">${esc(S.newMsg)}</div>`;
+    m += `<div id="dropzone" style="display:flex;flex-direction:column;gap:12px">
+      <div class="tile first"><span class="ic">${ICON.cam}</span><b>Take a photo</b><span>Opens the camera. Printed lists and work orders read best.</span>
+        <input type="file" id="f-cam" accept="image/*" capture="environment" aria-label="Take a photo of your list"></div>
+      <div class="tile"><span class="ic">${ICON.file}</span><b>Choose photos or a file</b><span>Your photo library, a screenshot, a PDF, or a .txt / .csv list.</span>
+        <input type="file" id="f-file" multiple accept="image/*,application/pdf,.pdf,.txt,.md,.csv,.tsv,text/plain,text/csv" aria-label="Choose photos or a file"></div>
+      <button class="tile" data-act="type"><span class="ic">${ICON.type}</span><b>Type or paste a list</b><span>One item per line. Lines ending in a colon become section headings.</span></button>
+    </div>`;
+    if(S.typing){
+      m += `<div class="field"><label class="lbl" for="paste">Your list</label><textarea id="paste" rows="9" placeholder="Cockpit:&#10;Torque GSU mounting screws&#10;Label circuit breakers&#10;Exterior:&#10;Seal antenna doubler"></textarea></div>
+        <button class="btn primary block" data-act="paste-go">Make checklist</button>`;
+    }
+    m += `<p class="tips">For the best read: shoot straight on, fill the frame with the list, and avoid shadows and glare. Photos stay on your phone.</p>`;
+    m += claudeNote(true);
+  }
+  else if(v==="reading"){
+    h = `<div class="wrap tb"><div class="ttl">Reading</div></div>`;
+    const t = S.busy && S.busy.thumbs && S.busy.thumbs[0];
+    m += `<div class="reading">${t ? `<div class="scanbox"><img src="${t}" alt="Your list"></div>` : `<div class="spin" aria-hidden="true"></div>`}
+      <div id="busy-status">${esc(S.busy ? S.busy.status : "")}</div>
+      <p class="muted" id="busy-sub" style="margin:0">${esc(S.busy ? S.busy.sub : "")}</p>
+      <button class="btn ghost sm" data-act="stop">Stop</button></div>`;
+  }
+  else if(v==="review" && S.draft){
+    const d = S.draft;
+    h = `<div class="wrap tb"><button class="back" data-act="cancel-review">‹ Cancel</button><div class="ttl">Check the list</div></div>`;
+    m += `<div class="field"><label class="lbl" for="rv-title">Checklist name</label><input type="text" id="rv-title" value="${esc(d.title)}"></div>`;
+    if(d.thumbs.length) m += `<div class="thumbs">${d.thumbs.map((t,i)=>`<button data-act="view-draft-photo" data-i="${i}" aria-label="View photo ${i+1}"><img src="${t}" alt=""></button>`).join("")}</div>`;
+    m += `<p class="muted" style="margin:0">${d.source==="photo"||d.source==="pdf" ? "Compare with the photo and fix anything misread. Delete junk lines with ✕. Items already ticked on the paper are marked ✓. Tap ✓ to change." : "Fix anything that's off. Tap ✓ on items that are already done."}</p>`;
+    m += `<div class="rows">` + groupHTML(d.items, it=>it.section, (it, ix)=>`
+      <div class="erow ${it.indent?"ind":""}">
+        <span class="num" style="text-align:right">${pad2(ix+1)}</span>
+        <textarea class="ein" rows="1" id="rv-${it.k}" data-k="${it.k}" aria-label="Item ${ix+1}">${esc(it.text)}</textarea>
+        <button class="mini ${it.done?"on":""}" data-act="rv-done" data-k="${it.k}" aria-pressed="${it.done}" aria-label="Already done">${ICON.check}</button>
+        <button class="mini" data-act="rv-del" data-k="${it.k}" aria-label="Remove item">✕</button>
+      </div>`) + `</div>`;
+    m += `<button class="addrow" data-act="rv-add">+ Add item</button>`;
+    const n = d.items.filter(i=>i.text.trim()).length;
+    b = `<div class="wrap"><button class="btn primary" data-act="save-draft">Save checklist · ${n} item${n===1?"":"s"}</button></div>`;
+  }
+  else if(v==="list"){
+    const l = getList(S.cur);
+    if(!l){ S.view="home"; return render(); }
+    const c = counts(l);
+    h = `<div class="wrap tb"><button class="back" data-act="home">‹ Lists</button><div class="ttl">${esc(l.title)}</div><button class="iconbtn" data-act="list-menu" aria-label="Checklist options">${ICON.more}</button></div>`;
+    m += `<div class="summary"><div class="sumline"><div class="big">${c.done}<small>/${c.total}</small></div>
+      <div>${c.open ? `${c.open} still open` : "All checked off"}${l.example?` · <span class="chip">Example</span>`:""}</div></div>${bar3(c)}</div>`;
+    if(!l.items.length) m += `<div class="empty">This list is empty.</div>`;
+    else m += `<div class="rows">` + groupHTML(l.items, it=>it.section, it=>rowHTML(it)) + `</div>`;
+    m += `<button class="addrow" data-act="add-item">+ Add something you found</button>`;
+  }
+  top.innerHTML = h; main.innerHTML = `<div class="wrap">${m}</div>`; bar.innerHTML = b;
+  document.querySelectorAll(".ein").forEach(grow);
+}
+function grow(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+function groupHTML(items, secOf, rowFn){
+  let out = "", cur = null, open = false;
+  items.forEach((it, ix)=>{
+    const s = secOf(it) || "";
+    if(s !== cur){
+      if(open) out += `</div>`;
+      if(s) out += `<div class="sec"><span>${esc(s)}</span></div>`;
+      else if(cur !== null) out += `<div class="sec"><span>&nbsp;</span></div>`;
+      out += `<div class="group">`; open = true; cur = s;
+    }
+    out += rowFn(it, ix);
+  });
+  if(open) out += `</div>`;
+  return out;
+}
+function rowHTML(it){
+  const d = isDone(it);
+  const label = d ? "Uncheck" : "Check off";
+  const meta = (it.added ? `<span class="chip amber">Not on master list</span>` : "") + (d && it.pre ? `<span class="chip">Already checked</span>` : "");
+  return `<div class="row ${d?"done":"open"} ${it.indent?"ind":""}">
+    <button class="tick" data-act="toggle" data-id="${it.id}" aria-pressed="${d}" aria-label="${label}: ${esc(it.text)}"><span class="box">${ICON.check}</span></button>
+    <div class="txt" data-act="toggle" data-id="${it.id}"><span class="t">${esc(it.text)}</span>${meta?`<span class="meta">${meta}</span>`:""}${it.note?`<span class="note">${esc(it.note)}</span>`:""}</div>
+    <span class="num">${it.added ? "+" : "#"+pad2(it.n)}</span>
+    <button class="more" data-act="item-menu" data-id="${it.id}" aria-label="Options for ${esc(it.text)}">${ICON.more}</button>
+  </div>`;
+}
+function card(l){
+  const c = counts(l);
+  return `<button class="lcard" data-act="open" data-id="${l.id}">
+    <span class="lc-top"><span class="lc-title">${esc(l.title)}</span>${l.example?`<span class="chip">Example</span>`:""}</span>
+    ${bar3(c)}
+    <span class="lc-meta"><span class="tab">${c.done} of ${c.total} checked</span><span>${fmtWhen(l.updatedAt)}</span></span>
+  </button>`;
+}
+
+/* ---------- sheet & toast ---------- */
+function openSheet(html){ $("#panel").innerHTML = html; const s=$("#sheet"); s.classList.add("show"); s.setAttribute("aria-hidden","false"); setTimeout(()=>{ const f=$("#panel [data-autofocus]"); if(f) f.focus(); },30); }
+function closeSheet(){ const s=$("#sheet"); s.classList.remove("show"); s.setAttribute("aria-hidden","true"); $("#panel").innerHTML=""; }
+let toastT;
+function toast(msg, undo){
+  const el = $("#toast");
+  el.innerHTML = `<span>${esc(msg)}</span>${undo?`<button data-act="undo">Undo</button>`:""}`;
+  el.classList.add("show"); S.undo = undo || null;
+  clearTimeout(toastT); toastT = setTimeout(()=>{ el.classList.remove("show"); S.undo = null; }, undo ? 6000 : 3200);
+}
+function confirmSheet(title, body, label, fn){
+  S.pendingConfirm = fn;
+  openSheet(`<h3>${esc(title)}</h3><p class="muted" style="margin:0">${esc(body)}</p>
+    <div class="row2"><button class="btn ghost" data-act="close-sheet">Cancel</button><button class="btn danger" data-act="confirm-yes" data-autofocus>${esc(label)}</button></div>`);
+}
+function photoSheet(photos, i){
+  openSheet(`<h3>Original list</h3><p class="muted" style="margin:0">Tap the photo to zoom.</p>
+    ${photos.map((p,ix)=>`<div class="viewer" data-act="zoom"><img src="${p}" alt="Photo ${ix+1} of the master list"></div>`).join("")}
+    <button class="btn block" data-act="close-sheet" data-autofocus>Close</button>`);
+  const v = document.querySelectorAll("#panel .viewer")[i||0]; if(v) v.scrollIntoView({block:"nearest"});
+}
+function listText(l){
+  const pend = l.items.filter(isDone), open = l.items.filter(i=>!isDone(i));
+  const tag = it => it.added ? "NEW" : "#"+it.n;
+  let t = `${l.title} (${new Date().toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})})\n`;
+  if(pend.length){ t += `\nDone:\n` + pend.map(i=>`[x] ${tag(i)} ${i.text}${i.note?` (${i.note})`:""}`).join("\n") + "\n"; }
+  if(open.length){ t += `\nStill open:\n` + open.map(i=>`[ ] ${tag(i)} ${i.text}${i.note?` (${i.note})`:""}`).join("\n") + "\n"; }
+  return t;
+}
+function copyText(text){
+  const fallback = ()=>openSheet(`<h3>Copy this text</h3><textarea id="copybox" rows="10" readonly>${esc(text)}</textarea><button class="btn block" data-act="close-sheet">Done</button>`);
+  if(navigator.share && /Android|iPhone|iPad/.test(navigator.userAgent)){
+    navigator.share({text}).catch(e=>{ if(e && e.name!=="AbortError") fallback(); });
+    return;
+  }
+  try{ navigator.clipboard.writeText(text).then(()=>toast("Copied"), fallback); }catch(e){ fallback(); }
+}
+
+/* ---------- actions ---------- */
+function findItem(l, id){ return l.items.find(i=>i.id===id); }
+const ACT = {
+  "new": ()=>{ S.view="new"; S.newMsg=""; S.typing=false; render(); window.scrollTo(0,0); },
+  "home": ()=>{ S.view="home"; S.cur=null; render(); window.scrollTo(0,0); },
+  "open": el=>{ S.cur=el.dataset.id; S.view="list"; S.filter="all"; render(); window.scrollTo(0,0); },
+  "type": ()=>{ S.typing=true; render(); const p=$("#paste"); if(p){ p.focus(); p.scrollIntoView({block:"center"}); } },
+  "paste-go": ()=>{
+    const t = ($("#paste")||{}).value || "";
+    const items = parseText(t, false);
+    if(!items.length){ S.newMsg = "Type at least one item, one per line."; render(); return; }
+    startReview(items, "", [], "text");
+  },
+  "stop": ()=>{ if(S.busy) S.busy.stopped = true; backToNew(""); },
+  "cancel-review": ()=>confirmSheet("Discard this list?", "The items read from your photo won't be saved.", "Discard", ()=>{ S.draft=null; S.view="new"; render(); }),
+  "rv-done": el=>{ const it=S.draft.items.find(i=>i.k===el.dataset.k); if(it){ it.done=!it.done; el.classList.toggle("on", it.done); el.setAttribute("aria-pressed", it.done); } },
+  "rv-del": el=>{ S.draft.items = S.draft.items.filter(i=>i.k!==el.dataset.k); render(); },
+  "rv-add": ()=>{ const last=S.draft.items[S.draft.items.length-1]; const k=newId(); S.draft.items.push({k, text:"", section:last?last.section:"", indent:0, done:false}); render(); const inp=document.getElementById("rv-"+k); if(inp){ inp.focus(); inp.scrollIntoView({block:"center"}); } },
+  "save-draft": saveDraft,
+  "view-draft-photo": el=>photoSheet(S.draft.thumbs, +el.dataset.i),
+  "view-photo": el=>{ const l=getList(S.cur); if(l) photoSheet(l.photos, +el.dataset.i); },
+  "toggle": el=>{
+    const l=getList(S.cur); if(!l) return; const it=findItem(l, el.dataset.id); if(!it) return;
+    it.pre = false; if(isDone(it)){ it.state="open"; it.doneAt=null; } else { it.state="done"; it.doneAt=Date.now(); }
+    touch(l);
+  },
+  "copy": ()=>{ const l=getList(S.cur); if(l) copyText(listText(l)); },
+  "add-item": ()=>openSheet(`<h3>Add an item</h3><p class="muted" style="margin:0">It's flagged so you remember to add it to the master list.</p>
+    <div class="field"><label class="lbl" for="new-text">Task</label><textarea id="new-text" rows="3" data-autofocus></textarea></div>
+    <div class="row2"><button class="btn ghost" data-act="close-sheet">Cancel</button><button class="btn primary" data-act="add-item-go">Add</button></div>`),
+  "add-item-go": ()=>{
+    const l=getList(S.cur); const t=($("#new-text")||{}).value||""; if(!l||!t.trim()) return;
+    l.items.push({id:newId(), n:null, text:t.trim().slice(0,400), section:"Added while working", indent:0, state:"open", note:"", added:true, doneAt:null, syncedAt:null});
+    closeSheet(); S.filter="all"; touch(l); toast("Added");
+  },
+  "item-menu": el=>{
+    const l=getList(S.cur); if(!l) return; const it=findItem(l, el.dataset.id); if(!it) return;
+    S.editId = it.id; const st = it.state;
+    openSheet(`<h3>${it.added?"Added item":"Item #"+it.n}${it.section?` <span class="muted" style="font-size:16px">· ${esc(it.section)}</span>`:""}</h3>
+      <div class="field"><label class="lbl" for="it-text">Task</label><textarea id="it-text" rows="3">${esc(it.text)}</textarea></div>
+      <div class="field"><label class="lbl" for="it-note">Note</label><input type="text" id="it-note" value="${esc(it.note||"")}" placeholder="e.g. waiting on part, needs inspection"></div>
+      <div class="row2"><button class="btn danger" data-act="item-del">Delete</button><button class="btn primary" data-act="item-save">Save</button></div>`);
+  },
+  "item-save": ()=>{
+    const l=getList(S.cur); if(!l) return; const it=findItem(l, S.editId); if(!it) return closeSheet();
+    const t=$("#it-text").value.trim(); if(t) it.text=t.slice(0,400);
+    it.note=$("#it-note").value.trim().slice(0,200);
+    closeSheet(); touch(l);
+  },
+  "item-del": ()=>{
+    const l=getList(S.cur); if(!l) return; const before=clone(l);
+    l.items=l.items.filter(i=>i.id!==S.editId); closeSheet(); touch(l); toast("Item deleted", ()=>touch(before));
+  },
+  "list-menu": ()=>{
+    const l=getList(S.cur); if(!l) return;
+    openSheet(`<h3>${esc(l.title)}</h3>
+      <div class="field"><label class="lbl" for="ls-title">Name</label><div class="row2" style="flex:none"><input type="text" id="ls-title" value="${esc(l.title)}" style="flex:3"><button class="btn sm" data-act="rename" style="flex:1">Rename</button></div></div>
+      <div class="menu">
+        ${l.photos&&l.photos.length?`<button data-act="view-photo" data-i="0">View original photo</button>`:""}
+        <button data-act="copy">Share or copy as text</button>
+        <button data-act="reset">Uncheck everything to reuse</button>
+        <button class="danger" data-act="delete-list">Delete checklist</button>
+      </div>
+      <button class="btn ghost block" data-act="close-sheet">Close</button>`);
+  },
+  "rename": ()=>{ const l=getList(S.cur); const t=$("#ls-title").value.trim(); if(l&&t){ l.title=t.slice(0,60); closeSheet(); touch(l); } },
+  "reset": ()=>confirmSheet("Uncheck everything?", "Every item goes back to unchecked so you can use the list again. Items you added stay.", "Uncheck all", ()=>{
+    const l=getList(S.cur); if(!l) return; const before=clone(l);
+    for(const it of l.items){ it.state="open"; it.doneAt=null; it.pre=false; }
+    touch(l); toast("All unchecked", ()=>touch(before));
+  }),
+  "delete-list": ()=>confirmSheet("Delete this checklist?", "This removes it from this phone.", "Delete", ()=>{
+    const l=getList(S.cur); if(!l) return; const before=clone(l);
+    removeList(l.id); S.view="home"; S.cur=null; render();
+    toast("Checklist deleted", ()=>{ if(before.example){ S.exampleHidden=false; saveLocal(); render(); } else touch(before); });
+  }),
+  "confirm-yes": ()=>{ const fn=S.pendingConfirm; S.pendingConfirm=null; closeSheet(); if(fn) fn(); },
+  "close-sheet": closeSheet,
+  "zoom": el=>el.classList.toggle("zoom"),
+  "undo": ()=>{ const u=S.undo; S.undo=null; $("#toast").classList.remove("show"); if(u) u(); }
+};
+
+document.addEventListener("click", e=>{
+  const el = e.target.closest("[data-act]");
+  if(!el) return;
+  const fn = ACT[el.dataset.act];
+  if(fn){ e.preventDefault(); fn(el, e); }
+});
+document.addEventListener("change", e=>{
+  if(e.target.id==="f-cam" || e.target.id==="f-file"){
+    const f=[...(e.target.files||[])]; e.target.value="";
+    if(!f.length) return;
+    Promise.resolve().then(()=>handleFiles(f)).catch(()=>backToNew("Something went wrong opening that file. Try again, or use a screenshot."));
+  }
+});
+document.addEventListener("input", e=>{
+  const t = e.target;
+  if(S.view==="review" && S.draft){
+    if(t.id==="rv-title") S.draft.title = t.value;
+    else if(t.classList.contains("ein")){ grow(t); const it=S.draft.items.find(i=>i.k===t.dataset.k); if(it) it.text=t.value; const n=S.draft.items.filter(i=>i.text.trim()).length; const sb=document.querySelector('[data-act="save-draft"]'); if(sb) sb.textContent=`Save checklist · ${n} item${n===1?"":"s"}`; }
+  }
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape" && $("#sheet").classList.contains("show")) closeSheet();
+  if(e.key==="Enter" && !e.shiftKey && e.target.id==="new-text"){ e.preventDefault(); ACT["add-item-go"](); }
+  if(e.key==="Enter" && e.target.id==="ls-title"){ e.preventDefault(); ACT["rename"](); }
+  if(e.key==="Enter" && e.target.classList && e.target.classList.contains("ein")){ e.preventDefault(); ACT["rv-add"](); }
+});
+document.addEventListener("dragover", e=>{ if(S.view==="new"){ e.preventDefault(); const z=$("#dropzone"); if(z) z.classList.add("drop"); } });
+document.addEventListener("dragleave", e=>{ const z=$("#dropzone"); if(z && !e.relatedTarget) z.classList.remove("drop"); });
+document.addEventListener("drop", e=>{ if(S.view==="new"){ e.preventDefault(); handleFiles(e.dataTransfer.files); } });
+window.addEventListener("paste", e=>{
+  if(S.view!=="new" || (e.target && e.target.id==="paste")) return;
+  const files = [...(e.clipboardData && e.clipboardData.files || [])];
+  if(files.length){ e.preventDefault(); handleFiles(files); }
+});
+
+loadLocal();
+render();
+</script>
+</body>
+</html>
