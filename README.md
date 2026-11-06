@@ -2,7 +2,7 @@
 
 Turn a photo of a paper or whiteboard task list into a checklist on your phone. Check items off while you work. Checked items stay on the list, so when you're back at the master list you can see what to mark.
 
-**Open it:** https://chach868.github.io/checklist-scanner/
+**Open it:** https://chach868.github.io/Checklist-Scanner/
 
 ## How to use it
 1. Tap **New checklist** and take a photo of the list, or choose a photo, screenshot, PDF, or .txt/.csv file. You can also type or paste the list.
